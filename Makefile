@@ -24,7 +24,7 @@ CCFLAGS=-fPIC -DCOMMON_COLOURED_PRINTS -Iinclude -O2 -Wall -I$(XILINX_SDX)/runti
 CCLINKFLAGS=-lm -lxilinxopencl -lpthread -lrt -ldl -lcrypt -L$(XILINX_SDX)/runtime/lib/aarch64
 
 # XOCC compile flags
-XOCCFLAGS=-t $(TARGET) --platform $(PLATFORM) --save-temps --clkid 0
+XOCCFLAGS=-t $(TARGET) --platform $(PLATFORM) -Iinclude --save-temps --clkid $(CLKID)
 
 # checkForVivado: check if vivado binary is reachable
 define checkForVivado
@@ -98,7 +98,7 @@ xclbin: fpga/$(TARGET)/$(DSA)/program.xclbin
 
 # Make command for OpenCL objects
 .PHONY: xo
-xo: fpga/$(TARGET)/$(DSA)/profCounter.xo
+xo: fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/$(TARGET)/$(DSA)/probe.xo
 
 # Copies host executable to SD folder
 fpga/$(TARGET)/$(DSA)/sd_card/execute: fpga/$(TARGET)/$(DSA)/execute fpga/$(TARGET)/$(DSA)/program.xclbin

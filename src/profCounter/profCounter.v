@@ -196,7 +196,7 @@ module profCounter(
 	assign m_axi_gmem_ARREGION = 4'b0000;
 	assign m_axi_gmem_RREADY = 1'b0;
 
-	assign profCounterIdleReady = writerIdle && commanderDone && stamperDone;
+	assign profCounterIdleReady = writerIdle && commanderDone && stamperDone && !controlStartPulse;
 	assign controlStartPulse = controlStart && !controlStartRegistered;
 
 	/* Register reset */

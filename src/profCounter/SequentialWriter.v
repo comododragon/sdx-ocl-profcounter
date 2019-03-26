@@ -55,7 +55,15 @@ module SequentialWriter(
 	// This module must be always-ready. Therefore a FIFO here will be essential
 	// For now, when a transaction is being performed, all following transactions are dropped
 
-	assign idle = 'h00 == state;
+	reg [7:0] state;
+	reg [63:0] addrCounter;
+	reg [63:0] wAddr;
+	reg [63:0] wData;
+
+	wire [63:0] fifoOut;
+	wire fifoIsEmpty;
+
+	assign idle = 'h00 == state && fifoIsEmpty;
 
 	assign axiAWVALID = 'h01 == state;
 	assign axiAWADDR = wAddr;
@@ -68,11 +76,6 @@ module SequentialWriter(
 
 	assign axiBREADY = 'h03 == state;
 
-	reg [7:0] state;
-	reg [63:0] addrCounter;
-	reg [63:0] wAddr;
-	reg [63:0] wData;
-
 	/* AXI4 Master write logic. This is not pipelined. Transactions are queued in the FIFO. If the FIFO is full, receiving transactions are dropped */
 	always @(posedge clk) begin
 		if(!rst_n) begin
@@ -84,17 +87,20 @@ module SequentialWriter(
 		else begin
 			/* Idle state */
 			if('h00 == state) begin
-				/* 0x1 command: save timestamp */
-				if('h1 == command) begin
-					addrCounter <= addrCounter + 'h8;
-					wAddr <= offset + addrCounter;
-					wData <= value;
+				/* FIFO is not empty, there is stuff to save */
+				if(!fifoIsEmpty) begin
+					/* If value is -1 (64-bit), this is an stop command. Reset address counter */
+					if('hFFFFFFFFFFFFFFFF == fifoOut) begin
+						addrCounter <= 'h0;
+					end
+					/* Else, it is a normal stamp request. Process it accordingly */
+					else begin
+						addrCounter <= addrCounter + 'h08;
+						wAddr <= offset + addrCounter;
+						wData <= fifoOut;
 
-					state <= 'h01;
-				end
-				/* 0x2 command received, reset counter */
-				else if('h2 == command) begin
-					addrCounter <= 'h00;
+						state <= 'h01;
+					end
 				end
 			end
 			/* Wait for AXI4 Slave to be ready to receive address */
@@ -120,5 +126,43 @@ module SequentialWriter(
 			end
 		end
 	end
+
+/*
+	xpm_fifo_sync#(
+		.FIFO_MEMORY_TYPE("auto"),
+		.FIFO_READ_LATENCY(1),
+		.FIFO_WRITE_DEPTH(256),
+		.READ_DATA_WIDTH(64),
+		.READ_MODE("std"),
+		.USE_ADV_FEATURES("0000"),
+		.WRITE_DATA_WIDTH(64)
+	) inst(
+		.wr_clk(clk),
+		.rst(~rst_n),
+
+		.wr_en(command != 'h0),
+		.rd_en('h00 == state),
+		.din(('h2 == command)? 'hFFFFFFFFFFFFFFFF : value),
+		.dout(fifoOut),
+		.empty(fifoIsEmpty)
+	);
+*/
+
+	/* Request FIFO */
+	FIFO#(256, 64) fifo(
+		.clk(clk),
+		.rst_n(rst_n),
+
+		/* Elements are enqueued every time command is different from 0 (i.e. STAMP command or STOP command) */
+		.enqueue(command != 'h0),
+		/* Elements are dequeued every time this FSM goes to idle */
+		.dequeue('h00 == state),
+		/* The input data is based on the command. If STAMP, the timestamp is enqueued, if STOP, -1 is enqueued */
+		.back(('h2 == command)? 'hFFFFFFFFFFFFFFFF : value),
+		.front(fifoOut),
+		/* If FIFO is full, stamp requests are dropped (sorry for that...) */
+		.full(),
+		.empty(fifoIsEmpty)
+	);
 
 endmodule
