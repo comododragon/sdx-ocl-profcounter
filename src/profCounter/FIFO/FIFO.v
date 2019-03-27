@@ -45,34 +45,38 @@ module FIFO#(
 	reg [`CLOG2(SIZE)-1:0] backPointer;
 	reg [`CLOG2(SIZE)-1:0] frontPointer;
 	reg [`CLOG2(SIZE):0] occupied;
-	wire [DATA_WIDTH-1:0] ramReadDataB;
+	reg rawDetected;
+	reg [DATA_WIDTH-1:0] rawReg;
+	wire [DATA_WIDTH-1:0] ramReadData;
 	wire commitEnqueue;
 	wire commitDequeue;
+	wire [`CLOG2(SIZE)-1:0] frontPointerNow;
 
-	assign front = ramReadDataB;
+	assign front = rawDetected? rawReg : ramReadData;
 	assign full = SIZE == occupied;
 	assign empty = 'h0 == occupied;
 
-	/* Enqueue only happens when FIFO is not full OR when simultaneous enqueue/dequeue happens */
+	/* Enqueue only happens when FIFO is not full */
 	assign commitEnqueue = enqueue && !full;
-	/* Dequeue only happens when FIFO is not empty OR when simultaneous enqueue/dequeue happens */
+	/* Dequeue only happens when FIFO is not empty */
 	assign commitDequeue = dequeue && !empty;
+	/* The "now" signal masks the registered output latency from the RAM */
+	assign frontPointerNow = commitDequeue? (((SIZE - 'h1) == frontPointer)? 'h0 : (frontPointer + 'h1)) : frontPointer;
 
-	/* Dual-port asynchronous memory */
-	SyncRAMDualPort#(`CLOG2(SIZE), DATA_WIDTH) ram(
+	/* Simple dual-port synchronous memory */
+	SyncRAMSimpleDualPort#(`CLOG2(SIZE), DATA_WIDTH) ram(
 		.clk(clk),
 
 		/* Port A is FIFO input */
-		.addressA(backPointer),
+		.enA(1'b1),
 		.writeA(commitEnqueue),
+		.addressA(backPointer),
 		.writeDataA(back),
-		.readDataA(),
 
 		/* Port B is FIFO output */
-		.addressB(frontPointer),
-		.writeB(1'b0),
-		.writeDataB(),
-		.readDataB(ramReadDataB)
+		.enB(1'b1),
+		.addressB(frontPointerNow),
+		.readDataB(ramReadData)
 	);
 
 	always @(posedge clk) begin
@@ -80,21 +84,31 @@ module FIFO#(
 			backPointer <= 'h0;
 			frontPointer <= 'h0;
 			occupied <= 'h0;
+			rawDetected <= 1'b0;
+			rawReg <= 'h0;
 		end
 		else begin
-			/* Update back pointer if enqueue is accepted */
+			/* Update pointers */
 			if(commitEnqueue)
 				backPointer <= ((SIZE - 'h1) == backPointer)? 'h0 : (backPointer + 'h1);
-
-			/* Update front pointer if dequeue is accepted */
 			if(commitDequeue)
-				frontPointer <= ((SIZE - 'h1) == frontPointer)? 'h0 : (frontPointer + 'h1);
+				frontPointer <= frontPointerNow;
 
 			/* Occupied does not change if nothing happens or if simultaneous enqueue/dequeue happens */
 			if(commitEnqueue && !commitDequeue)
 				occupied <= occupied + 'h1;
 			else if(!commitEnqueue && commitDequeue)
 				occupied <= occupied - 'h1;
+
+			/* We want the memory to work as a read-after-write logic (e.g. when addressA and addressB matches) */
+			/* Thus when this happens, we save this state, so that the next clock the output will be concise */
+			if(commitEnqueue && (frontPointerNow == backPointer)) begin
+				rawDetected <= 1'b1;
+				rawReg <= back;
+			end
+			else begin
+				rawDetected <= 1'b0;
+			end
 		end
 	end
 

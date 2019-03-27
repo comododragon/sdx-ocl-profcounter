@@ -74,38 +74,4 @@ module CommandUnit(
 		end
 	end
 
-/*
-	// XXX: DUMMY LOGIC, IT GENERATES 10 WRITE SIGNALS EVERY 40 CLOCKS, THEN IT GENERATES A STOP SIGNAL
-
-	reg [3:0] state;
-	reg [31:0] counter;
-
-	assign done = 'h0 == state;
-	assign command = ('h1 == state)? (('h190 == counter)? 'h2 : (('h000 == (counter % 'h028))? 'h1 : 'h0)) : 'h0;
-
-	always @(posedge clk) begin
-		if(!rst_n) begin
-			counter <= 'h000;
-			state <= 'h0;
-		end
-		else begin
-			if('h0 == state) begin
-				if(start) begin
-					counter <= 'h000;
-					state <= 'h1;
-				end
-			end
-			else if('h1 == state) begin
-				counter <= counter + 'h001;
-
-				if('h190 == counter)
-					state <= 'h0;
-			end
-			else begin
-				state <= 'h0;
-			end
-		end
-	end
-*/
-
 endmodule

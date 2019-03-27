@@ -283,7 +283,6 @@ module profCounter(
 		.offset(controlOffset),
 		.command(commanderOut),
 		.value(stamperOut),
-		//.value({28'b0, 32'hDEADBEEF, commanderOut}),
 		.idle(writerIdle),
 
 		.axiAWVALID(m_axi_gmem_AWVALID),

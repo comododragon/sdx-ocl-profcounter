@@ -39,7 +39,7 @@ __kernel void probe(__global unsigned * restrict timeline) {
 }
 ```
 
-* ***src/profCounter/*:*** the RTL kernel that performs all the magic. This is the pseudo-code for the kernel:
+* ***src/profCounter/:*** the RTL kernel that performs all the magic. This is the pseudo-code for the kernel:
 ```
 __read_only pipe unsigned p0 __attribute__((xcl_reqd_pipe_depth(16)));
 
@@ -161,7 +161,7 @@ $ make clean (clean your whole project)
 ## Files description
 
 * ***src***;
-	* ***profCounter/FIFO/tb/*:*** testbench for the FIFO module;
+	* ***profCounter/FIFO/tb/:*** testbench for the FIFO module;
 	* ***profCounter/FIFO/*.v:*** simple FIFO implementation;
 	* ***profCounter/generateXO.tcl:*** TCL script used during Vivado generation of the ```profCounter``` kernel;
 	* ***profCounter/BasicController.v:*** basic controller that complies with the RTL kernel specification from Xilinx SDx (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#qbh1504034323531);

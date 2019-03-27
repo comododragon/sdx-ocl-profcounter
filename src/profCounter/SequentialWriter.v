@@ -52,9 +52,6 @@ module SequentialWriter(
 	input axiBVALID;
 	output axiBREADY;
 
-	// This module must be always-ready. Therefore a FIFO here will be essential
-	// For now, when a transaction is being performed, all following transactions are dropped
-
 	reg [7:0] state;
 	reg [63:0] addrCounter;
 	reg [63:0] wAddr;
@@ -126,27 +123,6 @@ module SequentialWriter(
 			end
 		end
 	end
-
-/*
-	xpm_fifo_sync#(
-		.FIFO_MEMORY_TYPE("auto"),
-		.FIFO_READ_LATENCY(1),
-		.FIFO_WRITE_DEPTH(256),
-		.READ_DATA_WIDTH(64),
-		.READ_MODE("std"),
-		.USE_ADV_FEATURES("0000"),
-		.WRITE_DATA_WIDTH(64)
-	) inst(
-		.wr_clk(clk),
-		.rst(~rst_n),
-
-		.wr_en(command != 'h0),
-		.rd_en('h00 == state),
-		.din(('h2 == command)? 'hFFFFFFFFFFFFFFFF : value),
-		.dout(fifoOut),
-		.empty(fifoIsEmpty)
-	);
-*/
 
 	/* Request FIFO */
 	FIFO#(256, 64) fifo(
