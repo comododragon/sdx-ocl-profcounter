@@ -56,7 +56,7 @@ __kernel void profCounter(__global long * restrict log) {
 }
 ```
 
-This pseudo-kernel is just for illustration purposes. As of Xilinx SDx 2018.2, non-blocking read_pipe is not implemented, therefore the cycle count is infeasible to be performed accurately, thus the kernel was implemented in Verilog following the same logic as presented above, though pipe reading and timestamping are performed in parallel and non-blocking. Thus, the behaviour if this kernel is:
+This pseudo-kernel is just for illustration purposes. As of Xilinx SDx 2018.2, non-blocking ```read_pipe``` is not implemented, therefore the cycle count is infeasible to be performed accurately, thus the kernel was implemented in Verilog following the same logic as presented above, though pipe reading and timestamping are performed in parallel and non-blocking. Thus, the behaviour if this kernel is:
 
 * It starts cycle counting as soon as the kernel is launched using ```clEnqueueTask```;
 * It saves a timestamp on the global memory space when a ```0x1``` command is received through the ```p0``` pipe;
@@ -162,7 +162,7 @@ $ make clean (clean your whole project)
 
 * ***src***;
 	* ***profCounter/FIFO/tb/:*** testbench for the FIFO module;
-	* ***profCounter/FIFO/*.v:*** simple FIFO implementation;
+	* ***profCounter/FIFO/:*** simple FIFO implementation;
 	* ***profCounter/generateXO.tcl:*** TCL script used during Vivado generation of the ```profCounter``` kernel;
 	* ***profCounter/BasicController.v:*** basic controller that complies with the RTL kernel specification from Xilinx SDx (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#qbh1504034323531);
 	* ***profCounter/CommandUnit.v:*** translates the commands coming from the OpenCL pipe;
