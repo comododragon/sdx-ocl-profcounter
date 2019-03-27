@@ -122,20 +122,20 @@ module tb;
 
 		/* FRONT [CD|AD|CA|FE] BACK */
 
-		/* Simultaneosly enqueue/dequeue */
+		/* Simultaneosly enqueue/dequeue (enqueue won't work as the FIFO is full) */
 		enqueue <= 'b1;
 		dequeue <= 'b1;
 		back <= 'hEF;
 		#50 @(posedge clk);
 
-		/* FRONT [AD|CA|FE|EF] BACK */
+		/* FRONT [AD|CA|FE|  ] BACK */
 
 		/* Dequeue two elements */
 		enqueue <= 'b0;
 		dequeue <= 'b1;
 		#200 @(posedge clk);
 
-		/* FRONT [FE|EF|  |  ] BACK */
+		/* FRONT [FE|  |  |  ] BACK */
 
 		/* Simultaneosly enqueue/dequeue */
 		enqueue <= 'b1;
@@ -143,7 +143,7 @@ module tb;
 		back <= 'hAE;
 		#50 @(posedge clk);
 
-		/* FRONT [EF|AE|  |  ] BACK */
+		/* FRONT [AE|  |  |  ] BACK */
 
 		/* Clean FIFO and finish */
 		enqueue <= 'b0;

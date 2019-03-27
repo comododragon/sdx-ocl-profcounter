@@ -25,7 +25,7 @@ The ```include/common.h``` header is distributed under the GPL-3.0 licence. See 
 
 This repository provides a functional example project of ProfCounter. It consists of two kernels:
 
-* `src/probe.cl`: a very simple kernel that perform some logic at certain times:
+* ***src/probe.cl:*** a very simple kernel that perform some logic at certain times:
 ```
 __kernel void probe(__global unsigned * restrict timeline) {
 	int i, j;
@@ -39,7 +39,7 @@ __kernel void probe(__global unsigned * restrict timeline) {
 }
 ```
 
-* src/profCounter/*: the RTL kernel that performs all the magic. This is the pseudo-code for the kernel:
+* ***src/profCounter/*:*** the RTL kernel that performs all the magic. This is the pseudo-code for the kernel:
 ```
 __read_only pipe unsigned p0 __attribute__((xcl_reqd_pipe_depth(16)));
 
@@ -108,7 +108,37 @@ $ ./execute
 ```
 * With this example code, timestamping will be requested when ```j``` is 0, 15, 30, 40, 50, 70, 100, 120, 199 and 200 on the ```probe``` kernel. Considering that this loop has an initiation interval (II) of 136 cycles, the following output is expected:
 ```
-TODO
+[ OK ] Getting platforms IDs...
+[ OK ] Getting devices IDs for first platform...
+[ OK ] Creating context...
+[ OK ] Creating command queue for "profCounter"...
+[ OK ] Creating command queue for "probe"...
+[ OK ] Opening program binary...
+[ OK ] Reading program binary...
+[ OK ] Creating program from binary...
+[ OK ] Building program...
+[ OK ] Creating kernel "profCounter" from program...
+[ OK ] Creating kernel "probe" from program...
+[ OK ] Creating buffers...
+[ OK ] Setting kernel arguments for "profCounter"...
+[ OK ] Setting kernel arguments for "probe"...
+[ OK ] [0] Setting buffers...
+[ OK ] [0] Running kernels...
+[ OK ] [0] Getting kernels arguments...
+Elapsed time spent on kernels: 491 us; Average time per iteration: 491.000000 us.
+Received values (assuming II of 136 cycles):
+|    | Absolute values                       || II-normalised values                  |
+|  i |       t(i) |  t(i)-t(0) | t(i)-t(i-1) ||       t(i) |  t(i)-t(0) | t(i)-t(i-1) |
+|  0 |   75005518 |          0 |           0 ||     551511 |          0 |           0 |
+|  1 |   75007558 |       2040 |        2040 ||     551526 |         15 |          15 |
+|  2 |   75009598 |       4080 |        2040 ||     551541 |         30 |          15 |
+|  3 |   75010958 |       5440 |        1360 ||     551551 |         40 |          10 |
+|  4 |   75012318 |       6800 |        1360 ||     551561 |         50 |          10 |
+|  5 |   75015038 |       9520 |        2720 ||     551581 |         70 |          20 |
+|  6 |   75019118 |      13600 |        4080 ||     551611 |        100 |          30 |
+|  7 |   75021838 |      16320 |        2720 ||     551631 |        120 |          20 |
+|  8 |   75032582 |      27064 |       10744 ||     551710 |        199 |          79 |
+|  9 |   75032718 |      27200 |         136 ||     551711 |        200 |           1 |
 ```
 
 ## Make Options
@@ -130,25 +160,26 @@ $ make clean (clean your whole project)
 
 ## Files description
 
-* ```src```;
-	* ```profCounter/FIFO/tb/*```: testbench for the FIFO module;
-	* ```profCounter/FIFO/*.v```: simple FIFO implementation;
-	* ```profCounter/generateXO.tcl```: TCL script used during Vivado generation of the ```profCounter``` kernel;
-	* ```profCounter/BasicController.v```: basic controller that complies with the RTL kernel specification from Xilinx SDx (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#qbh1504034323531);
-	* ```profCounter/CommandUnit.v```: translates the commands coming from the OpenCL pipe;
-	* ```profCounter/profCounter.v```: the kernel main module;
-	* ```profCounter/SequentialWriter.v```: simple AXI4 Master module for writing the timestamps on the global memory;
-	* ```profCounter/Timestamper.v```: simple cycle counter;
-	* ```host.fpga.c```: example host OpenCL code;
-	* ```probe.cl```: example DUT kernel;
-	* ```profCounter.xml```: XML description file for the ```profCounter``` kernel (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#rzv1504034325561).
+* ***src***;
+	* ***profCounter/FIFO/tb/*:*** testbench for the FIFO module;
+	* ***profCounter/FIFO/*.v:*** simple FIFO implementation;
+	* ***profCounter/generateXO.tcl:*** TCL script used during Vivado generation of the ```profCounter``` kernel;
+	* ***profCounter/BasicController.v:*** basic controller that complies with the RTL kernel specification from Xilinx SDx (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#qbh1504034323531);
+	* ***profCounter/CommandUnit.v:*** translates the commands coming from the OpenCL pipe;
+	* ***profCounter/profCounter.v:*** the kernel main module;
+	* ***profCounter/SequentialWriter.v:*** simple AXI4 Master module for writing the timestamps on the global memory;
+	* ***profCounter/Timestamper.v:*** simple cycle counter;
+	* ***host.fpga.c:*** example host OpenCL code;
+	* ***probe.cl:*** example DUT kernel;
+	* ***profCounter.xml:*** XML description file for the ```profCounter``` kernel (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#rzv1504034325561).
 
 ## TODOs
 
 This is a work under construction. There are still some stuff to be done:
 
 * Add support for NDRange kernels;
-* Currently, timestamp requests are enqueued in a FIFO for global memory write. If this FIFO is full, further requests are dropped. It would be nice to implement some logic to avoid dropping OR notifying the used that timestamps were dropped.
+* Currently, timestamp requests are enqueued in a FIFO for global memory write. If this FIFO is full, further requests are dropped. It would be nice to implement some logic to avoid dropping OR notifying the used that timestamps were dropped;
+* The ```SequentialWriter``` module is extremely simple, performing non-pipelined sequential writes of 64-bit words. It should be improved to perform pipelined burst writes and make use of the FIFOs from the AXI4 Slave interface.
 
 ## Acknowledgements
 

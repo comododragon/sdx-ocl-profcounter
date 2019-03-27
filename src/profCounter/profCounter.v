@@ -159,7 +159,7 @@ module profCounter(
 	reg ap_rst_n_registered;
 
 	/* Asserted when this module is idle/ready */
-	wire profCounterIdleReady;
+	wire profCounterDoneReady;
 	/* basicController I/Os */
 	wire controlStart;
 	reg controlStartRegistered;
@@ -196,7 +196,7 @@ module profCounter(
 	assign m_axi_gmem_ARREGION = 4'b0000;
 	assign m_axi_gmem_RREADY = 1'b0;
 
-	assign profCounterIdleReady = writerIdle && commanderDone && stamperDone && !controlStartPulse;
+	assign profCounterDoneReady = writerIdle && commanderDone && stamperDone && !controlStartPulse;
 	assign controlStartPulse = controlStart && !controlStartRegistered;
 
 	/* Register reset */
@@ -209,13 +209,13 @@ module profCounter(
 		controlStartRegistered <= controlStart;
 	end
 
-	/* Logic to create a start pulse and also to handle the global idle signal */
+	/* Logic to handle the global idle signal */
 	always @(posedge ap_clk) begin
 		if(!ap_rst_n_registered) begin
 			controlIdle <= 1'b1;
 		end
 		else begin
-			if(profCounterIdleReady)
+			if(profCounterDoneReady)
 				controlIdle <= 1'b1;
 			else if(controlStartPulse)
 				controlIdle <= 1'b0;
@@ -246,8 +246,8 @@ module profCounter(
 		.axiRREADY(s_axi_control_RREADY),
 
 		.start(controlStart),
-		.done(profCounterIdleReady),
-		.ready(profCounterIdleReady),
+		.done(profCounterDoneReady),
+		.ready(profCounterDoneReady),
 		.idle(controlIdle),
 		.offset(controlOffset)
 	);
