@@ -147,16 +147,16 @@ $ ./execute hold
 
 ## ProfCounter Commands
 
-ProfCounter works based on commands received via an OpenCL pipe. The usage of ```include/profcounter.h``` is recommended as it already declares the OpenCL pipe and also defines useful functions:
+ProfCounter works based on commands received via an OpenCL pipe. The use of ```include/profcounter.h``` is recommended as it already declares the OpenCL pipe and also defines useful functions:
 
-* ```PROFCOUNTER_INIT()```: initialise the private variables that contain the command identifiers;
-* ```PROFCOUNTER_STAMP()```: send a stamp command to ProfCounter. The current clock cycle is enqueued for storing on global memory;
-* ```PROFCOUNTER_HOLD()```: stamp commands enqueued for write on global memory are held until ```PROFCOUNTER_FINISH()``` is called. This prevents ProfCounter from using the global memory bandwidth and possibly affecting performance of the kernels being tested;
+* ***PROFCOUNTER_INIT():*** initialise the private variables that contain the command identifiers;
+* ***PROFCOUNTER_STAMP():*** send a stamp command to ProfCounter. The current clock cycle is enqueued for storing on global memory;
+* ***PROFCOUNTER_HOLD():*** stamp commands enqueued for write on global memory are held until ```PROFCOUNTER_FINISH()``` is called. This prevents ProfCounter from using the global memory bandwidth and possibly affecting performance of the kernels being tested;
 * ```PROFCOUNTER_FINISH()```: finish execution of ProfCounter. This must be called at the end of your kernel being tested. If ```PROFCOUNTER_HOLD()``` was previously called, this call will flush the request FIFO to global memory before finishing.
 
 Stamp commands are enqueued in a request FIFO. In current implementation, stamp requests are dropped if the FIFO gets full. There are two cases where this might happen:
 * ```PROFCOUNTER_STAMP()``` is called several times in a small period of time, faster than the write of timestamps to global memory;
-* ```PROFCOUNTER_HOLD()``` was called and ```PROFCOUNTER_STAMP()``` several times, filling up the request FIFO.
+* ```PROFCOUNTER_HOLD()``` was called and ```PROFCOUNTER_STAMP()``` is used several times, filling up the request FIFO.
 
 If you think that the request FIFO is not big enough for your implementation, you can increase its size by changing the first parameter in the FIFO declaration on file ```srd/profCounter/SequentialWriter.v```, which is currently set to 256 words:
 ```
