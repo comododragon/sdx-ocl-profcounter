@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 
+`include "commands.vh"
+
 module SequentialWriter(
 	/* Standard pins */
 	clk,
@@ -53,6 +55,7 @@ module SequentialWriter(
 	output axiBREADY;
 
 	reg [7:0] state;
+	reg hold;
 	reg [63:0] addrCounter;
 	reg [63:0] wAddr;
 	reg [63:0] wData;
@@ -73,6 +76,21 @@ module SequentialWriter(
 
 	assign axiBREADY = 'h03 == state;
 
+	/* Hold logic. If COMM_HOLD is received, FIFO dequeuing is paused until a COMM_FINISH is issued */
+	always @(posedge clk) begin
+		if(!rst_n) begin
+			hold <= 1'b0;
+		end
+		else begin
+			/* Hold was issued, FIFO dequeuing is paused */
+			if(`COMM_HOLD == command)
+				hold <= 1'b1;
+			/* Finish was issued, FIFO dequeuing is released */
+			else if(`COMM_FINISH == command)
+				hold <= 1'b0;
+		end
+	end
+
 	/* AXI4 Master write logic. This is not pipelined. Transactions are queued in the FIFO. If the FIFO is full, receiving transactions are dropped */
 	always @(posedge clk) begin
 		if(!rst_n) begin
@@ -85,8 +103,8 @@ module SequentialWriter(
 			/* Idle state */
 			if('h00 == state) begin
 				/* FIFO is not empty, there is stuff to save */
-				if(!fifoIsEmpty) begin
-					/* If value is -1 (64-bit), this is an stop command. Reset address counter */
+				if(!hold && !fifoIsEmpty) begin
+					/* If value is -1 (64-bit), this is a COMM_FINISH command. Reset address counter */
 					if('hFFFFFFFFFFFFFFFF == fifoOut) begin
 						addrCounter <= 'h0;
 					end
@@ -129,12 +147,12 @@ module SequentialWriter(
 		.clk(clk),
 		.rst_n(rst_n),
 
-		/* Elements are enqueued every time command is different from 0 (i.e. STAMP command or STOP command) */
-		.enqueue(command != 'h0),
-		/* Elements are dequeued every time this FSM goes to idle */
-		.dequeue('h00 == state),
-		/* The input data is based on the command. If STAMP, the timestamp is enqueued, if STOP, -1 is enqueued */
-		.back(('h2 == command)? 'hFFFFFFFFFFFFFFFF : value),
+		/* Elements are enqueued every time command is COMM_STAMP or COMM_FINISH */
+		.enqueue(`COMM_STAMP == command || `COMM_FINISH == command),
+		/* Elements are dequeued every time this FSM goes to idle and hold period is over (if applicable) */
+		.dequeue('h00 == state && !hold),
+		/* The input data is based on the command. If COMM_STAMP, the timestamp is enqueued, if COMM_FINISH, -1 is enqueued */
+		.back((`COMM_FINISH == command)? 'hFFFFFFFFFFFFFFFF : value),
 		.front(fifoOut),
 		/* If FIFO is full, stamp requests are dropped (sorry for that...) */
 		.full(),

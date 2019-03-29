@@ -1,14 +1,17 @@
 `timescale 1ns / 1ps
 
+`include "commands.vh"
+
 /**
  * CommandUnit
  *
  * This module receive commands from the OpenCL pipe p0 and generates commands for other modules inside this RTL kernel.
  *
- * Command | Description
- *     0x0 | NOP
- *     0x1 | Save timestamp
- *     0x2 | Finish kernel execution
+ * Command     | Description
+ * COMM_NOP    | NOP
+ * COMM_STAMP  | Save timestamp
+ * COMM_HOLD   | Hold: timestamp values are only written when 0x3 is issued (e.g. to avoid competition on global memory)
+ * COMM_FINISH | Finish kernel execution
  */
 module CommandUnit(
 	/* Standard pins */
@@ -17,7 +20,7 @@ module CommandUnit(
 
 	/* Starts command unit */
 	start,
-	/* When a 0x2 command is received through the pipe, the module finishes execution and asserts done when finished */
+	/* When a COMM_FINISH command is received through the pipe, the module finishes execution and asserts done when finished */
 	done,
 
 	/* AXI4-Stream pipe sink */
@@ -63,8 +66,8 @@ module CommandUnit(
 			end
 			/* State 0x1: kernel is running and ready to receive orders */
 			else if('h1 == state) begin
-				/* 0x2 command received, stop kernel */
-				if(pipeTVALID && 'h2 == pipeTDATA[3:0]) begin
+				/* COMM_FINISH command received, stop kernel */
+				if(pipeTVALID && `COMM_FINISH == pipeTDATA[3:0]) begin
 					state <= 'h0;
 				end
 			end

@@ -7,8 +7,11 @@
  *
  * Action                               | Reaction
  * Start this kernel via clEnqueue...() | ProfCounter starts counting clock cycles
- * Send 0x1 via pipe "p0"               | Saves current clock cycle (timestamp) to global memory
- * Send 0x2 via pipe "p0"               | Stops ProfCounter execution
+ * Send COMM_STAMP via pipe "p0"        | Saves current clock cycle (timestamp) to global memory
+ * Send COMM_HOLD via pipe "p0"         | Timestamps are enqueued and only written to global memory after 0x3 is issued,
+ *                                      | preventing competition on global memory that could affect the kernel under test.
+ *                                      | This command stays valid until a COMM_FINISH is issued.
+ * Send COMM_FINISH via pipe "p0"       | Stops ProfCounter execution
  */
 module profCounter(
 	/* Standard pins */

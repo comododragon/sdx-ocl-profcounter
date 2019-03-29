@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 
+`include "commands.vh"
+
 module Timestamper(
 	/* Standard pins */
 	clk,
@@ -7,7 +9,7 @@ module Timestamper(
 
 	/* Starts command unit */
 	start,
-	/* When a 0x2 command is received, the module finishes execution and asserts done when finished */
+	/* When a COMM_FINISH command is received, the module finishes execution and asserts done when finished */
 	done,
 	/* commandUnit command */
 	command,
@@ -49,8 +51,8 @@ module Timestamper(
 			else if('h1 == state) begin
 				counter <= counter + 'h01;
 
-				/* 0x2 command: stop counting */
-				if('h2 == command)
+				/* COMM_FINISH command: stop counting */
+				if(`COMM_FINISH == command)
 					state <= 'h0;
 			end
 			else begin

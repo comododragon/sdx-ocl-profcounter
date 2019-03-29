@@ -55,7 +55,7 @@
 	fprintf(stderr, "Error: %s: %s\n", strerror(errno), arg);\
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	/* Return variable */
 	int rv = EXIT_SUCCESS;
 
@@ -99,12 +99,17 @@ int main(void) {
 	cl_mem logK = NULL;
 	unsigned *timeline = malloc(10 * sizeof(unsigned));
 	cl_mem timelineK = NULL;
+	char mustHold = 0;
 
 	/* Populate timeline */
 	unsigned timelineFixed[10] = {0, 15, 30, 40, 50, 70, 100, 120, 199, 200};
 	for(i = 0; i < 10; i++)
 		timeline[i] = timelineFixed[i];
 	i = 0;
+
+	/* Update mustHold variable if command-line argument was provided */
+	if(argc > 1 && !strcmp(argv[1], "hold"))
+		mustHold = 1;
 
 	/* Get platforms IDs */
 	PRINT_STEP("Getting platforms IDs...");
@@ -202,6 +207,8 @@ int main(void) {
 	PRINT_STEP("Setting kernel arguments for \"probe\"...");
 	fRet = clSetKernelArg(kernelProbe, 0, sizeof(cl_mem), &timelineK);
 	ASSERT_CALL(CL_SUCCESS == fRet, FUNCTION_ERROR_STATEMENTS("clSetKernelArg (timelineK)"));
+	fRet = clSetKernelArg(kernelProbe, 1, sizeof(char), &mustHold);
+	ASSERT_CALL(CL_SUCCESS == fRet, FUNCTION_ERROR_STATEMENTS("clSetKernelArg (mustHold)"));
 	PRINT_SUCCESS();
 
 	do {

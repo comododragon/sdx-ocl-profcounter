@@ -140,6 +140,35 @@ Received values (assuming II of 136 cycles):
 |  8 |   75032582 |      27064 |       10744 ||     551710 |        199 |          79 |
 |  9 |   75032718 |      27200 |         136 ||     551711 |        200 |           1 |
 ```
+* ***Note:*** you can execute the host code with ```hold``` argument to activate the hold behaviour of ProfCounter (see Section ***ProfCounter Commands***):
+```
+$ ./execute hold
+```
+
+## ProfCounter Commands
+
+ProfCounter works based on commands received via an OpenCL pipe. The usage of ```include/profcounter.h``` is recommended as it already declares the OpenCL pipe and also defines useful functions:
+
+* ```PROFCOUNTER_INIT()```: initialise the private variables that contain the command identifiers;
+* ```PROFCOUNTER_STAMP()```: send a stamp command to ProfCounter. The current clock cycle is enqueued for storing on global memory;
+* ```PROFCOUNTER_HOLD()```: stamp commands enqueued for write on global memory are held until ```PROFCOUNTER_FINISH()``` is called. This prevents ProfCounter from using the global memory bandwidth and possibly affecting performance of the kernels being tested;
+* ```PROFCOUNTER_FINISH()```: finish execution of ProfCounter. This must be called at the end of your kernel being tested. If ```PROFCOUNTER_HOLD()``` was previously called, this call will flush the request FIFO to global memory before finishing.
+
+Stamp commands are enqueued in a request FIFO. In current implementation, stamp requests are dropped if the FIFO gets full. There are two cases where this might happen:
+* ```PROFCOUNTER_STAMP()``` is called several times in a small period of time, faster than the write of timestamps to global memory;
+* ```PROFCOUNTER_HOLD()``` was called and ```PROFCOUNTER_STAMP()``` several times, filling up the request FIFO.
+
+If you think that the request FIFO is not big enough for your implementation, you can increase its size by changing the first parameter in the FIFO declaration on file ```srd/profCounter/SequentialWriter.v```, which is currently set to 256 words:
+```
+	/* ... */
+
+	/* Request FIFO */
+	FIFO#(256, 64) fifo(
+		/* ... */
+	);
+
+	/* ... */
+```
 
 ## Make Options
 
@@ -165,6 +194,7 @@ $ make clean (clean your whole project)
 	* ***profCounter/FIFO/:*** simple FIFO implementation;
 	* ***profCounter/generateXO.tcl:*** TCL script used during Vivado generation of the ```profCounter``` kernel;
 	* ***profCounter/BasicController.v:*** basic controller that complies with the RTL kernel specification from Xilinx SDx (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#qbh1504034323531);
+	* ***profCounter/commands.vh:*** macros defining the commands supported by ProfCounter;
 	* ***profCounter/CommandUnit.v:*** translates the commands coming from the OpenCL pipe;
 	* ***profCounter/profCounter.v:*** the kernel main module;
 	* ***profCounter/SequentialWriter.v:*** simple AXI4 Master module for writing the timestamps on the global memory;
