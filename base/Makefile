@@ -129,7 +129,7 @@ fpga/$(TARGET)/$(DSA)/probe.xo: src/probe.cl
 fpga/$(TARGET)/$(DSA)/profCounter.xo: $(wildcard src/profCounter/*.v src/profCounter/*.v) src/profCounter.xml
 	$(call checkForXo)
 	mkdir -p fpga/$(TARGET)/$(DSA)
-	$(VIVADO) -mode batch -source src/profCounter/generateXO.tcl -tclargs fpga/$(TARGET)/$(DSA)/profCounter.xo profCounter $(TARGET) $(DSA) .
+	$(VIVADO) -mode batch -source src/profCounter/generateXO.tcl -tclargs fpga/$(TARGET)/$(DSA)/profCounter.xo profCounter $(TARGET) $(DSA) . .
 
 # Clean all
 .PHONY: clean

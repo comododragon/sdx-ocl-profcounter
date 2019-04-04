@@ -32,9 +32,9 @@
 #
 # *******************************************************************************/
 
-if { $::argc != 5 } {
-    puts "ERROR: Program \"$::argv0\" requires 5 arguments!\n"
-    puts "Usage: $::argv0 <xoname> <krnl_name> <target> <device> <path>\n"
+if { $::argc != 6 } {
+    puts "ERROR: Program \"$::argv0\" requires 6 arguments!\n"
+    puts "Usage: $::argv0 <xoname> <krnl_name> <target> <device> <src_path> <dst_path>\n"
     exit
 }
 
@@ -42,13 +42,14 @@ set xoname [lindex $::argv 0]
 set krnl_name [lindex $::argv 1]
 set target    [lindex $::argv 2]
 set device    [lindex $::argv 3]
-set base_path [lindex $::argv 4]
+set src_path [lindex $::argv 4]
+set dst_path [lindex $::argv 5]
 
 #set suffix "${krnl_name}_${target}_${device}"
 
-set path_to_hdl "${base_path}/src/profCounter"
-set path_to_packaged "${base_path}/fpga/${target}/${device}/packaged_kernel"
-set path_to_tmp_project "${base_path}/fpga/${target}/${device}/project"
+set path_to_hdl "${src_path}/src/profCounter"
+set path_to_packaged "${dst_path}/fpga/${target}/${device}/packaged_kernel"
+set path_to_tmp_project "${dst_path}/fpga/${target}/${device}/project"
 
 create_project -force kernel_pack $path_to_tmp_project 
 add_files -norecurse [glob $path_to_hdl/*.v $path_to_hdl/FIFO/*.v]
@@ -77,4 +78,4 @@ if {[file exists "${xoname}"]} {
     file delete -force "${xoname}"
 }
 
-package_xo -xo_path ${xoname} -kernel_name ${krnl_name} -ip_directory ${base_path}/fpga/${target}/${device}/packaged_kernel -kernel_xml ${base_path}/src/profCounter.xml
+package_xo -xo_path ${xoname} -kernel_name ${krnl_name} -ip_directory ${dst_path}/fpga/${target}/${device}/packaged_kernel -kernel_xml ${src_path}/src/profCounter.xml
