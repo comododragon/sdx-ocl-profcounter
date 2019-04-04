@@ -39,19 +39,26 @@ __kernel void probe(__global unsigned * restrict timeline) {
 }
 ```
 
-* ***src/profCounter/:*** the RTL kernel that performs all the magic. This is the pseudo-code for the kernel:
+* ***src/profCounter/:*** the RTL kernel that performs all the magic. This is the pseudo-code for the kernel (the hold logic is not shown for simplicity):
 ```
+#define COMM_NOP 0x0
+#define COMM_STAMP 0xD
+#define COMM_HOLD 0xE
+#define COMM_FINISH 0xF
+
 __read_only pipe unsigned p0 __attribute__((xcl_reqd_pipe_depth(16)));
 
 __kernel void profCounter(__global long * restrict log) {
 	long *offset = 0x0;
-	unsigned command = 0x0;
+	unsigned command = COMM_NOP;
 
-	for(long cycleCount = 0; command != 0x2; cycleCount++) {
+	for(long cycleCount = 0; command != COMM_FINISH; cycleCount++) {
 		read_pipe(p0, &command);
 
-		if(0x1 == command)
+		if(COMM_STAMP == command)
 			log[offset++] = cycleCount;
+		else if(command > COMM_NOP && command < COMM_STAMP)
+			log[offset++] = (((command - 1) & 0xF) << 60) | (cycleCount & 0x0FFFFFFFFFFFFFFF);
 	}
 }
 ```
@@ -59,8 +66,10 @@ __kernel void profCounter(__global long * restrict log) {
 This pseudo-kernel is just for illustration purposes. As of Xilinx SDx 2018.2, non-blocking ```read_pipe``` is not implemented, therefore the cycle count is infeasible to be performed accurately, thus the kernel was implemented in Verilog following the same logic as presented above, though pipe reading and timestamping are performed in parallel and non-blocking. Thus, the behaviour if this kernel is:
 
 * It starts cycle counting as soon as the kernel is launched using ```clEnqueueTask```;
-* It saves a timestamp on the global memory space when a ```0x1``` command is received through the ```p0``` pipe;
-* It stops counting when a ```0x2``` command is received through the ```p0```pipe.
+* It saves a timestamp on the global memory space when a ```COMM_STAMP``` command is received through the ```p0``` pipe;
+* It saves a timestamp plus a checkpoint ID if a ```COMM_CHECKPOINT``` command is issued (in current implementation, there are 12 different checkpoint IDs, where command ```0x1``` issues a checkpoint with ID 0, ```0x2``` a checkpoint with ID 1 and so on);
+* If ```COMM_HOLD``` is issued, all following stamps and checkpoints are only saved to global memory after ```COMM_FINISH``` is called;
+* It stops counting when a ```COMM_FINISH``` command is received through the ```p0```pipe.
 
 Therefore, to use the profiler on our ```probe```, some simple modifications are needed:
 ```
@@ -83,7 +92,7 @@ __kernel void probe(__global unsigned * restrict timeline) {
 }
 ```
 
-You must ensure that on the host code, the ```profCounter``` gets started BEFORE ```probe```. The ```include/profcounter.h``` is a very simple header that already provides the pipe declaration for your DUT and macros that writes commands to the pipe. You must also ensure that the ```0x2``` command is sent to the profiler (using ```PROFCOUNTER_FINISH()``` for convenience), otherwise the profiling kernel will execute indefinitely and likely to hang your host code execution.
+You must ensure that on the host code, the ```profCounter``` gets started BEFORE ```probe```. The ```include/profcounter.h``` is a very simple header that already provides the pipe declaration for your DUT and macros that writes commands to the pipe. You must also ensure that the ```COMM_FINISH``` command is sent to the profiler (using ```PROFCOUNTER_FINISH()``` for convenience), otherwise the profiling kernel will execute indefinitely and likely to hang your host code execution.
 
 ## Usage by Example
 
@@ -127,18 +136,20 @@ $ ./execute
 [ OK ] [0] Getting kernels arguments...
 Elapsed time spent on kernels: 491 us; Average time per iteration: 491.000000 us.
 Received values (assuming II of 136 cycles):
-|    | Absolute values                       || II-normalised values                  |
-|  i |       t(i) |  t(i)-t(0) | t(i)-t(i-1) ||       t(i) |  t(i)-t(0) | t(i)-t(i-1) |
-|  0 |   75005518 |          0 |           0 ||     551511 |          0 |           0 |
-|  1 |   75007558 |       2040 |        2040 ||     551526 |         15 |          15 |
-|  2 |   75009598 |       4080 |        2040 ||     551541 |         30 |          15 |
-|  3 |   75010958 |       5440 |        1360 ||     551551 |         40 |          10 |
-|  4 |   75012318 |       6800 |        1360 ||     551561 |         50 |          10 |
-|  5 |   75015038 |       9520 |        2720 ||     551581 |         70 |          20 |
-|  6 |   75019118 |      13600 |        4080 ||     551611 |        100 |          30 |
-|  7 |   75021838 |      16320 |        2720 ||     551631 |        120 |          20 |
-|  8 |   75032582 |      27064 |       10744 ||     551710 |        199 |          79 |
-|  9 |   75032718 |      27200 |         136 ||     551711 |        200 |           1 |
+|    | Absolute values                       || II-normalised values                  | ID (if      |
+|  i |       t(i) |  t(i)-t(0) | t(i)-t(i-1) ||       t(i) |  t(i)-t(0) | t(i)-t(i-1) | applicable) |
+|  0 |   75002461 |          0 |           0 ||     551488 |          0 |           0 |           0 |
+|  1 |   75002599 |        138 |         138 ||     551489 |          1 |           1 |           0 |
+|  2 |   75004639 |       2178 |        2040 ||     551504 |         16 |          15 |           1 |
+|  3 |   75006679 |       4218 |        2040 ||     551519 |         31 |          15 |           2 |
+|  4 |   75008039 |       5578 |        1360 ||     551529 |         41 |          10 |           3 |
+|  5 |   75009399 |       6938 |        1360 ||     551539 |         51 |          10 |           4 |
+|  6 |   75012119 |       9658 |        2720 ||     551559 |         71 |          20 |           5 |
+|  7 |   75016199 |      13738 |        4080 ||     551589 |        101 |          30 |           6 |
+|  8 |   75018919 |      16458 |        2720 ||     551609 |        121 |          20 |           7 |
+|  9 |   75029663 |      27202 |       10744 ||     551688 |        200 |          79 |           8 |
+| 10 |   75029799 |      27338 |         136 ||     551689 |        201 |           1 |           9 |
+| 11 |   75029800 |      27339 |           1 ||     551689 |        201 |           0 |          11 |
 ```
 * ***Note:*** you can execute the host code with ```hold``` argument to activate the hold behaviour of ProfCounter (see Section ***ProfCounter Commands***):
 ```
@@ -150,13 +161,17 @@ $ ./execute hold
 ProfCounter works based on commands received via an OpenCL pipe. The use of ```include/profcounter.h``` is recommended as it already declares the OpenCL pipe and also defines useful functions:
 
 * ***PROFCOUNTER_INIT():*** initialise the private variables that contain the command identifiers;
+* ***PROFCOUNTER_CHECKPOINT(id):*** send a checkpoint command to ProfCounter. This is similar to ```PROFCOUNTER_STAMP()```, but also a checkpoint ID is saved with the timestamp:
+	* The four most significant bits holds the checkpoint id, which is the ```id``` argument of this call. For current implementation, ```id``` can range from 0 to 11;
+	* The remaining 60 bits holds the timestamp. Please note that using checkpoints therefore removes 4 bits of timestamping capability;
+* ***PROFCOUNTER_CHECKPOINT_X():*** similar to ```PROFCOUNTER_CHECKPOINT(X)```, but the checkpoint ID is resolved at compile-time. ```X``` can range from 0 to 11;
 * ***PROFCOUNTER_STAMP():*** send a stamp command to ProfCounter. The current clock cycle is enqueued for storing on global memory;
-* ***PROFCOUNTER_HOLD():*** stamp commands enqueued for write on global memory are held until ```PROFCOUNTER_FINISH()``` is called. This prevents ProfCounter from using the global memory bandwidth and possibly affecting performance of the kernels being tested;
+* ***PROFCOUNTER_HOLD():*** stamp/checkpoint commands enqueued for write on global memory are held until ```PROFCOUNTER_FINISH()``` is called. This prevents ProfCounter from using the global memory bandwidth and possibly affecting performance of the kernels being tested;
 * ***PROFCOUNTER_FINISH():*** finish execution of ProfCounter. This must be called at the end of your kernel being tested. If ```PROFCOUNTER_HOLD()``` was previously called, this call will flush the request FIFO to global memory before finishing.
 
-Stamp commands are enqueued in a request FIFO. In current implementation, stamp requests are dropped if the FIFO gets full. There are two cases where this might happen:
-* ```PROFCOUNTER_STAMP()``` is called several times in a small period of time, faster than the write of timestamps to global memory;
-* ```PROFCOUNTER_HOLD()``` was called and ```PROFCOUNTER_STAMP()``` is used several times, filling up the request FIFO.
+Stamp/checkpoint commands are enqueued in a request FIFO. In current implementation, requests are dropped if the FIFO gets full. There are two cases where this might happen:
+* ```PROFCOUNTER_STAMP()```/```PROFCOUNTER_CHECKPOINT(id)```/```PROFCOUNTER_CHECKPOINT_X()``` is called several times in a small period of time, faster than the write of timestamps to global memory;
+* ```PROFCOUNTER_HOLD()``` was called and ```PROFCOUNTER_STAMP()```/```PROFCOUNTER_CHECKPOINT(id)```/```PROFCOUNTER_CHECKPOINT_X()``` is used several times, filling up the request FIFO.
 
 If you think that the request FIFO is not big enough for your implementation, you can increase its size by changing the first parameter in the FIFO declaration on file ```srd/profCounter/SequentialWriter.v```, which is currently set to 256 words:
 ```
@@ -169,6 +184,8 @@ If you think that the request FIFO is not big enough for your implementation, yo
 
 	/* ... */
 ```
+
+Please note that there is no way to differentiate in the global memory log between a stamp and a checkpoint command. For example, if the word ```0x2000000000000100``` is found on the global memory log, this can either indicate that a stamp command was issued at cycle ```0x2000000000000100``` or that a checkpoint command was issued at cycle ```0x100``` with ID ```0x2```. Avoid mixing stamp commands with checkpoint commands, or perform it in a way where the results can be interpreted without ambiguity.
 
 ## Make Options
 

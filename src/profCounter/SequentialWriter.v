@@ -60,6 +60,9 @@ module SequentialWriter(
 	reg [63:0] wAddr;
 	reg [63:0] wData;
 
+	wire fifoEnqueue;
+	wire fifoDequeue;
+	wire [63:0] fifoIn;
 	wire [63:0] fifoOut;
 	wire fifoIsEmpty;
 
@@ -142,17 +145,22 @@ module SequentialWriter(
 		end
 	end
 
+	/* Elements are enqueued every time command is not COMM_NOP or COMM_HOLD */
+	assign fifoEnqueue = command != `COMM_NOP && command != `COMM_HOLD;
+	/* Elements are dequeued every time this FSM goes to idle and hold period is over (if applicable) */
+	assign fifoDequeue = 'h00 == state && !hold;
+	/* The input data is based on the command. If COMM_STAMP, the timestamp is enqueued, if COMM_FINISH, -1 is enqueued */
+	/* For other values different from COMM_NOP and COMM_HOLD, the checkpoint ID is saved with the timestamp (COMM_CHECKPOINT) */
+	assign fifoIn = (`COMM_FINISH == command)? 'hFFFFFFFFFFFFFFFF : ((`COMM_STAMP == command)? value : {command[3:0] - 4'h1, value[59:0]});
+
 	/* Request FIFO */
 	FIFO#(256, 64) fifo(
 		.clk(clk),
 		.rst_n(rst_n),
 
-		/* Elements are enqueued every time command is COMM_STAMP or COMM_FINISH */
-		.enqueue(`COMM_STAMP == command || `COMM_FINISH == command),
-		/* Elements are dequeued every time this FSM goes to idle and hold period is over (if applicable) */
-		.dequeue('h00 == state && !hold),
-		/* The input data is based on the command. If COMM_STAMP, the timestamp is enqueued, if COMM_FINISH, -1 is enqueued */
-		.back((`COMM_FINISH == command)? 'hFFFFFFFFFFFFFFFF : value),
+		.enqueue(fifoEnqueue),
+		.dequeue(fifoDequeue),
+		.back(fifoIn),
 		.front(fifoOut),
 		/* If FIFO is full, stamp requests are dropped (sorry for that...) */
 		.full(),

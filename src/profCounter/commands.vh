@@ -2,8 +2,8 @@
 `define COMMANDS_VH
 
 `define COMM_NOP 'h0
-`define COMM_STAMP 'h1
-`define COMM_HOLD 'h2
-`define COMM_FINISH 'h3
+`define COMM_STAMP 'hD
+`define COMM_HOLD 'hE
+`define COMM_FINISH 'hF
 
 `endif

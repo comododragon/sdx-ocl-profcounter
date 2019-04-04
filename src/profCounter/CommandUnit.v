@@ -7,11 +7,12 @@
  *
  * This module receive commands from the OpenCL pipe p0 and generates commands for other modules inside this RTL kernel.
  *
- * Command     | Description
- * COMM_NOP    | NOP
- * COMM_STAMP  | Save timestamp
- * COMM_HOLD   | Hold: timestamp values are only written when 0x3 is issued (e.g. to avoid competition on global memory)
- * COMM_FINISH | Finish kernel execution
+ * Command                     | Description
+ * COMM_NOP              (0x0) | NOP
+ * COMM_CHECKPOINT (0x1 - 0xC) | Save checkpoint, i.e. save the checkpoint ID + timestamp
+ * COMM_STAMP            (0xD) | Save timestamp
+ * COMM_HOLD             (0xE) | Hold: timestamp values are only written when COMM_FINISH is issued (e.g. to avoid competition on global memory)
+ * COMM_FINISH           (0xF) | Finish kernel execution
  */
 module CommandUnit(
 	/* Standard pins */
@@ -50,7 +51,7 @@ module CommandUnit(
 	/* This module is always ready to receive pipe commands (as long as the kernel is running) */
 	assign pipeTREADY = !done;
 	/* Command is only generated when kernel is running and value from pipe is valid */
-	assign command = ('h1 == state && pipeTVALID)? pipeTDATA[3:0] : 'h0;
+	assign command = ('h1 == state && pipeTVALID)? pipeTDATA[3:0] : `COMM_NOP;
 
 	/* Main FSM */
 	always @(posedge clk) begin

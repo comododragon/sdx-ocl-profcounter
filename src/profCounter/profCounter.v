@@ -8,6 +8,10 @@
  * Action                               | Reaction
  * Start this kernel via clEnqueue...() | ProfCounter starts counting clock cycles
  * Send COMM_STAMP via pipe "p0"        | Saves current clock cycle (timestamp) to global memory
+ * Send COMM_CHECKPOINT via pipe "p0"   | Saves current clock cycle (timestamp) to global memory along with the checkpoint ID.
+ *                                      | COMM_CHECKPOINT is a multi-valued command, ranging from 0x1 to 0xC in current implementation.
+ *                                      | Each value corresponds to a checkpoint ID (command 0x1 is ID 0, command 0x2 is ID 1 and so on).
+ *                                      | This is useful to keep track in the code of where the timestamp was requested.
  * Send COMM_HOLD via pipe "p0"         | Timestamps are enqueued and only written to global memory after 0x3 is issued,
  *                                      | preventing competition on global memory that could affect the kernel under test.
  *                                      | This command stays valid until a COMM_FINISH is issued.

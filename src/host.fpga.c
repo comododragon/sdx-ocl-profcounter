@@ -251,16 +251,22 @@ int main(int argc, char *argv[]) {
 	printf("Elapsed time spent on kernels: %ld us; Average time per iteration: %lf us.\n", totalTime, totalTime / (double) i);
 
 	printf("Received values (assuming II of 136 cycles):\n");
-	printf("|    | Absolute values                       || II-normalised values                  |\n");
-	printf("|  i |       t(i) |  t(i)-t(0) | t(i)-t(i-1) ||       t(i) |  t(i)-t(0) | t(i)-t(i-1) |\n");
+	printf("|    | Absolute values                       || II-normalised values                  | ID (if      |\n");
+	printf("|  i |       t(i) |  t(i)-t(0) | t(i)-t(i-1) ||       t(i) |  t(i)-t(0) | t(i)-t(i-1) | applicable) |\n");
 	for(i = 0; i < 50; i++) {
 		if(!(log[i]))
 			break;
 
+		unsigned checkpointID = (log[i] >> 60) & 0xF;
+		uint64_t timestamp0 = log[0] & 0xFFFFFFFFFFFFFFF;
+		uint64_t timestampi_1 = i? (log[i-1] & 0xFFFFFFFFFFFFFFF) : 0;
+		uint64_t timestampi = log[i] & 0xFFFFFFFFFFFFFFF;
+
 		printf(
-			"| %2d | %10ld | %10ld |  %10ld || %10ld | %10ld |  %10ld |\n", i,
-			log[i], log[i] - log[0], i? (log[i] - log[i-1]) : 0,
-			log[i] / 136, (log[i] - log[0]) / 136, i? (log[i] - log[i-1]) / 136 : 0
+			"| %2d | %10ld | %10ld |  %10ld || %10ld | %10ld |  %10ld |          %2u |\n", i,
+			timestampi, timestampi - timestamp0, i? (timestampi - timestampi_1) : 0,
+			timestampi / 136, (timestampi - timestamp0) / 136, i? ((timestampi - timestampi_1) / 136) : 0,
+			checkpointID
 		);
 	}
 
