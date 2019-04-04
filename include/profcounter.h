@@ -4,6 +4,7 @@
 /* Source-end of AXI4-Stream that goes to profCounter */
 __write_only pipe unsigned p0 __attribute__((xcl_reqd_pipe_depth(16)));
 
+/* Initialise profcounter variables */
 #define PROFCOUNTER_INIT() __private const unsigned\
 	__PROFCOUNTER_COMM_CHECKPOINT_0__ = 0x1,\
 	__PROFCOUNTER_COMM_CHECKPOINT_1__ = 0x2,\
@@ -21,6 +22,7 @@ __write_only pipe unsigned p0 __attribute__((xcl_reqd_pipe_depth(16)));
 	__PROFCOUNTER_COMM_HOLD__ = 0xE,\
 	__PROFCOUNTER_COMM_FINISH__ = 0xF\
 
+/* Issue a checkpoint command, with the ID defined at runtime */
 #define PROFCOUNTER_CHECKPOINT(id) do {\
 	if(id >= 0 && id <= 11) {\
 		__private unsigned __id__ = id + 1;\
@@ -28,6 +30,7 @@ __write_only pipe unsigned p0 __attribute__((xcl_reqd_pipe_depth(16)));
 	}\
 } while(0)
 
+/* Issue a checkpoint command, with the ID defined at compile-time */
 #define PROFCOUNTER_CHECKPOINT_0() write_pipe(p0, &__PROFCOUNTER_COMM_CHECKPOINT_0__)
 #define PROFCOUNTER_CHECKPOINT_1() write_pipe(p0, &__PROFCOUNTER_COMM_CHECKPOINT_1__)
 #define PROFCOUNTER_CHECKPOINT_2() write_pipe(p0, &__PROFCOUNTER_COMM_CHECKPOINT_2__)
@@ -41,10 +44,13 @@ __write_only pipe unsigned p0 __attribute__((xcl_reqd_pipe_depth(16)));
 #define PROFCOUNTER_CHECKPOINT_10() write_pipe(p0, &__PROFCOUNTER_COMM_CHECKPOINT_10__)
 #define PROFCOUNTER_CHECKPOINT_11() write_pipe(p0, &__PROFCOUNTER_COMM_CHECKPOINT_11__)
 
+/* Issue a stamp command */
 #define PROFCOUNTER_STAMP() write_pipe(p0, &__PROFCOUNTER_COMM_STAMP__)
 
+/* Request profcounter to hold all writes to global memory until PROFCOUNTER_FINISH() is called */
 #define PROFCOUNTER_HOLD() write_pipe(p0, &__PROFCOUNTER_COMM_HOLD__)
 
+/* Finish kernel execution and release hold if applicable */
 #define PROFCOUNTER_FINISH() write_pipe(p0, &__PROFCOUNTER_COMM_FINISH__)
 
 #endif
