@@ -24,8 +24,8 @@ __write_only pipe unsigned p0 __attribute__((xcl_reqd_pipe_depth(16)));
 
 /* Issue a checkpoint command, with the ID defined at runtime */
 #define PROFCOUNTER_CHECKPOINT(id) do {\
-	if(id >= 0 && id <= 11) {\
-		__private unsigned __id__ = id + 1;\
+	__private unsigned __id__ = ((id) & 0xF) + 1;\
+	if(__id__ > 0 && __id__ <= 12) {\
 		write_pipe(p0, &__id__);\
 	}\
 } while(0)

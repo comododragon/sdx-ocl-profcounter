@@ -21,9 +21,11 @@ Most of this project is distributed under the BSD-3-Clause licence. See LICENSE.
 
 The ```include/common.h``` header is distributed under the GPL-3.0 licence. See the following repo for details: https://github.com/comododragon/commonh
 
+The BFS example kernel is adapted from the Rodinia Benchmark Suite (https://rodinia.cs.virginia.edu/doku.php), therefore it holds the Rodinia licence.
+
 ## Usage Introduction
 
-This repository provides a functional example project of ProfCounter. It consists of two kernels:
+This repository provides a functional example project of ProfCounter at folder ***base***. It consists of two kernels:
 
 * ***src/probe.cl:*** a very simple kernel that perform some logic at certain times:
 ```
@@ -206,7 +208,10 @@ $ make clean (clean your whole project)
 
 ## Files description
 
-* ***src***;
+* ***example/***;
+	* ***prof/:*** adapted BFS kernel from Rodinia with ProfCounter timestamping;
+	* ***noprof/:*** adapted BFS kernel from Rodinia with no ProfCounter;
+* ***base/src/***;
 	* ***profCounter/FIFO/tb/:*** testbench for the FIFO module;
 	* ***profCounter/FIFO/:*** simple FIFO implementation;
 	* ***profCounter/generateXO.tcl:*** TCL script used during Vivado generation of the ```profCounter``` kernel;

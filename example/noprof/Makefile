@@ -115,7 +115,7 @@ fpga/$(TARGET)/$(DSA)/execute: src/host.fpga.c include/prepostambles.h ../../bas
 # Synthesises OpenCL kernels
 fpga/$(TARGET)/$(DSA)/program.xclbin: fpga/$(TARGET)/$(DSA)/bfs.xo
 	$(call checkForXclbin)
-	$(XOCC) $(XOCCFLAGS) $(XOCCLDFLAGS) -lo fpga/$(TARGET)/$(DSA)/program.xclbin fpga/$(TARGET)/$(DSA)/bfs.xo --sys_config ocl
+	$(XOCC) $(XOCCFLAGS) $(XOCCLDFLAGS) -lo fpga/$(TARGET)/$(DSA)/program.xclbin fpga/$(TARGET)/$(DSA)/bfs.xo --sys_config ocl --report system -R2
 	# Append two lines to init.sh, responsible for writing onto /etc/profile the XILINX_OPENCL export and cd to /mnt
 	echo -e "\necho -e \"\\\\nexport XILINX_OPENCL=/mnt/embedded_root\" >> /etc/profile" >> fpga/$(TARGET)/$(DSA)/sd_card/init.sh
 	echo -e "echo -e \"cd /mnt\" >> /etc/profile" >> fpga/$(TARGET)/$(DSA)/sd_card/init.sh
@@ -124,7 +124,7 @@ fpga/$(TARGET)/$(DSA)/program.xclbin: fpga/$(TARGET)/$(DSA)/bfs.xo
 fpga/$(TARGET)/$(DSA)/bfs.xo: src/bfs.cl
 	$(call checkForXo)
 	mkdir -p fpga/$(TARGET)/$(DSA)
-	$(XOCC) $(XOCCFLAGS) -c --messageDb fpga/$(TARGET)/$(DSA)/bfs.mdb -Iinclude -I../../base/include --xp misc:solution_name=_xocc_compile --xp param:compiler.version=31 src/bfs.cl -o fpga/$(TARGET)/$(DSA)/bfs.xo
+	$(XOCC) $(XOCCFLAGS) -c --messageDb fpga/$(TARGET)/$(DSA)/bfs.mdb -Iinclude -I../../base/include --xp misc:solution_name=_xocc_compile --xp param:compiler.version=31 src/bfs.cl -o fpga/$(TARGET)/$(DSA)/bfs.xo --report system -R2
 
 # Clean all
 .PHONY: clean

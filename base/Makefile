@@ -114,7 +114,7 @@ fpga/$(TARGET)/$(DSA)/execute: src/host.fpga.c include/common.h
 # Synthesises OpenCL kernels
 fpga/$(TARGET)/$(DSA)/program.xclbin: fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/$(TARGET)/$(DSA)/probe.xo
 	$(call checkForXclbin)
-	$(XOCC) $(XOCCFLAGS) $(XOCCLDFLAGS) -lo fpga/$(TARGET)/$(DSA)/program.xclbin fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/$(TARGET)/$(DSA)/probe.xo --sys_config ocl
+	$(XOCC) $(XOCCFLAGS) $(XOCCLDFLAGS) -lo fpga/$(TARGET)/$(DSA)/program.xclbin fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/$(TARGET)/$(DSA)/probe.xo --sys_config ocl --report system -R2
 	# Append two lines to init.sh, responsible for writing onto /etc/profile the XILINX_OPENCL export and cd to /mnt
 	echo -e "\necho -e \"\\\\nexport XILINX_OPENCL=/mnt/embedded_root\" >> /etc/profile" >> fpga/$(TARGET)/$(DSA)/sd_card/init.sh
 	echo -e "echo -e \"cd /mnt\" >> /etc/profile" >> fpga/$(TARGET)/$(DSA)/sd_card/init.sh
@@ -123,7 +123,7 @@ fpga/$(TARGET)/$(DSA)/program.xclbin: fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/
 fpga/$(TARGET)/$(DSA)/probe.xo: src/probe.cl
 	$(call checkForXo)
 	mkdir -p fpga/$(TARGET)/$(DSA)
-	$(XOCC) $(XOCCFLAGS) -c --messageDb fpga/$(TARGET)/$(DSA)/probe.mdb -Iinclude --xp misc:solution_name=_xocc_compile --xp param:compiler.version=31 src/probe.cl -o fpga/$(TARGET)/$(DSA)/probe.xo
+	$(XOCC) $(XOCCFLAGS) -c --messageDb fpga/$(TARGET)/$(DSA)/probe.mdb -Iinclude --xp misc:solution_name=_xocc_compile --xp param:compiler.version=31 src/probe.cl -o fpga/$(TARGET)/$(DSA)/probe.xo --report system -R2
 
 # Compiles OpenCL object for profile counter RTL kernel
 fpga/$(TARGET)/$(DSA)/profCounter.xo: $(wildcard src/profCounter/*.v src/profCounter/*.v) src/profCounter.xml
