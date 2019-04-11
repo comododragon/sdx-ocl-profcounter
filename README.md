@@ -166,6 +166,7 @@ ProfCounter works based on commands received via an OpenCL pipe. The use of ```i
 * ***PROFCOUNTER_CHECKPOINT(id):*** send a checkpoint command to ProfCounter. This is similar to ```PROFCOUNTER_STAMP()```, but also a checkpoint ID is saved with the timestamp:
 	* The four most significant bits holds the checkpoint id, which is the ```id``` argument of this call. For current implementation, ```id``` can range from 0 to 11;
 	* The remaining 60 bits holds the timestamp. Please note that using checkpoints therefore removes 4 bits of timestamping capability;
+	* Only the first 4 bits of ```id``` are considered. You can use the other bits to "link" a variable from your OpenCL to guarantee that this call will not be rearranged due to HLS scheduling policies (though we have not experienced such issue), creating a true data dependency (e.g. ```PROFCOUNTER_CHECKPOINT((myVariable << 4) | 0x4)```
 * ***PROFCOUNTER_CHECKPOINT_id():*** similar to ```PROFCOUNTER_CHECKPOINT(X)```, but the checkpoint ID is resolved at compile-time. ```id``` can range from 0 to 11;
 * ***PROFCOUNTER_STAMP():*** send a stamp command to ProfCounter. The current clock cycle is enqueued for storing on global memory;
 * ***PROFCOUNTER_HOLD():*** stamp/checkpoint commands enqueued for write on global memory are held until ```PROFCOUNTER_FINISH()``` is called. This prevents ProfCounter from using the global memory bandwidth and possibly affecting performance of the kernels being tested;
