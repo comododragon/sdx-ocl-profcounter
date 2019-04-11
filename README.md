@@ -166,7 +166,7 @@ ProfCounter works based on commands received via an OpenCL pipe. The use of ```i
 * ***PROFCOUNTER_CHECKPOINT(id):*** send a checkpoint command to ProfCounter. This is similar to ```PROFCOUNTER_STAMP()```, but also a checkpoint ID is saved with the timestamp:
 	* The four most significant bits holds the checkpoint id, which is the ```id``` argument of this call. For current implementation, ```id``` can range from 0 to 11;
 	* The remaining 60 bits holds the timestamp. Please note that using checkpoints therefore removes 4 bits of timestamping capability;
-* ***PROFCOUNTER_CHECKPOINT_X():*** similar to ```PROFCOUNTER_CHECKPOINT(X)```, but the checkpoint ID is resolved at compile-time. ```X``` can range from 0 to 11;
+* ***PROFCOUNTER_CHECKPOINT_id():*** similar to ```PROFCOUNTER_CHECKPOINT(X)```, but the checkpoint ID is resolved at compile-time. ```id``` can range from 0 to 11;
 * ***PROFCOUNTER_STAMP():*** send a stamp command to ProfCounter. The current clock cycle is enqueued for storing on global memory;
 * ***PROFCOUNTER_HOLD():*** stamp/checkpoint commands enqueued for write on global memory are held until ```PROFCOUNTER_FINISH()``` is called. This prevents ProfCounter from using the global memory bandwidth and possibly affecting performance of the kernels being tested;
 * ***PROFCOUNTER_FINISH():*** finish execution of ProfCounter. This must be called at the end of your kernel being tested. If ```PROFCOUNTER_HOLD()``` was previously called, this call will flush the request FIFO to global memory before finishing.
@@ -208,9 +208,6 @@ $ make clean (clean your whole project)
 
 ## Files description
 
-* ***example/***;
-	* ***prof/:*** adapted BFS kernel from Rodinia with ProfCounter timestamping;
-	* ***noprof/:*** adapted BFS kernel from Rodinia with no ProfCounter;
 * ***base/src/***;
 	* ***profCounter/FIFO/tb/:*** testbench for the FIFO module;
 	* ***profCounter/FIFO/:*** simple FIFO implementation;
@@ -223,7 +220,10 @@ $ make clean (clean your whole project)
 	* ***profCounter/Timestamper.v:*** simple cycle counter;
 	* ***host.fpga.c:*** example host OpenCL code;
 	* ***probe.cl:*** example DUT kernel;
-	* ***profCounter.xml:*** XML description file for the ```profCounter``` kernel (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#rzv1504034325561).
+	* ***profCounter.xml:*** XML description file for the ```profCounter``` kernel (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#rzv1504034325561);
+* ***example/***;
+	* ***prof/:*** adapted BFS kernel from Rodinia with ProfCounter timestamping;
+	* ***noprof/:*** adapted BFS kernel from Rodinia with no ProfCounter;
 
 ## TODOs
 
