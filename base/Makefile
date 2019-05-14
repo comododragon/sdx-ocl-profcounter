@@ -26,6 +26,14 @@ CCLINKFLAGS=-lm -lxilinxopencl -lpthread -lrt -ldl -lcrypt -L$(XILINX_SDX)/runti
 # XOCC compile flags
 XOCCFLAGS=-t $(TARGET) --platform $(PLATFORM) -Iinclude --save-temps --clkid $(CLKID)
 
+# By default, auto-pipelining is disabled
+AUTOPIPELINING=no
+ifeq ($(AUTOPIPELINING), no)
+    PIPELININGFLAG=--xp param:compiler.enableAutoPipelining=false
+else
+    PIPELININGFLAG=
+endif
+
 # checkForVivado: check if vivado binary is reachable
 define checkForVivado
     $(if $(wildcard $(VIVADO)), , $(error vivado binary not found, please check your Xilinx installation and/or the init script, e.g. /path/to/xilinx/SDx/20xx.x/settings64.sh))
@@ -114,7 +122,7 @@ fpga/$(TARGET)/$(DSA)/execute: src/host.fpga.c include/common.h
 # Synthesises OpenCL kernels
 fpga/$(TARGET)/$(DSA)/program.xclbin: fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/$(TARGET)/$(DSA)/probe.xo
 	$(call checkForXclbin)
-	$(XOCC) $(XOCCFLAGS) $(XOCCLDFLAGS) -lo fpga/$(TARGET)/$(DSA)/program.xclbin fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/$(TARGET)/$(DSA)/probe.xo --sys_config ocl --report system -R2
+	$(XOCC) $(XOCCFLAGS) $(XOCCLDFLAGS) -lo fpga/$(TARGET)/$(DSA)/program.xclbin fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/$(TARGET)/$(DSA)/probe.xo --sys_config ocl -R2
 	# Append two lines to init.sh, responsible for writing onto /etc/profile the XILINX_OPENCL export and cd to /mnt
 	echo -e "\necho -e \"\\\\nexport XILINX_OPENCL=/mnt/embedded_root\" >> /etc/profile" >> fpga/$(TARGET)/$(DSA)/sd_card/init.sh
 	echo -e "echo -e \"cd /mnt\" >> /etc/profile" >> fpga/$(TARGET)/$(DSA)/sd_card/init.sh
@@ -123,7 +131,7 @@ fpga/$(TARGET)/$(DSA)/program.xclbin: fpga/$(TARGET)/$(DSA)/profCounter.xo fpga/
 fpga/$(TARGET)/$(DSA)/probe.xo: src/probe.cl
 	$(call checkForXo)
 	mkdir -p fpga/$(TARGET)/$(DSA)
-	$(XOCC) $(XOCCFLAGS) -c --messageDb fpga/$(TARGET)/$(DSA)/probe.mdb -Iinclude --xp misc:solution_name=_xocc_compile --xp param:compiler.version=31 src/probe.cl -o fpga/$(TARGET)/$(DSA)/probe.xo --report system -R2
+	export PROFCOUNTERSRCROOT=$(shell pwd)/src/profCounter; $(XOCC) $(XOCCFLAGS) -c --messageDb fpga/$(TARGET)/$(DSA)/probe.mdb -Iinclude --xp misc:solution_name=_xocc_compile --xp param:compiler.version=31 --xp prop:solution.hls_pre_tcl=src/profCounter/directives.tcl $(PIPELININGFLAG) src/probe.cl -o fpga/$(TARGET)/$(DSA)/probe.xo -R2
 
 # Compiles OpenCL object for profile counter RTL kernel
 fpga/$(TARGET)/$(DSA)/profCounter.xo: $(wildcard src/profCounter/*.v src/profCounter/*.v) src/profCounter.xml

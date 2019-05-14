@@ -17,8 +17,8 @@ __kernel void probe(__global unsigned * restrict timeline, char mustHold) {
 	/* Generate 10 timestamps, each on a given "epoch" given by timeline */
 	for(i = 0, j = 0; i < 10; j++) {
 		if(timeline[i] == j) {
-			/* Send command to save timestamp with variable checkpoint ID */
-			PROFCOUNTER_CHECKPOINT(i);
+			/* Send command to save timestamp with checkpoint ID 10 */
+			PROFCOUNTER_CHECKPOINT_10();
 			i++;
 		}
 	}

@@ -8,7 +8,7 @@ OpenCL Fine-grain Profiling Kernel for Xilinx SDx Development Environment
 
 ## Introduction
 
-The ProfCount is a framework developed for fine-grain profiling of OpenCL kernels developed using the Xilinx SDx environment. It consists of:
+The ProfCounter is a framework developed for fine-grain profiling of OpenCL kernels developed using the Xilinx SDx environment. It consists of:
 
 * A header that may be included to your design under test (DUT, namely an OpenCL kernel), including functions for timestamping;
 * An RTL kernel that performs cycle count.
@@ -158,25 +158,37 @@ Received values (assuming II of 136 cycles):
 $ ./execute hold
 ```
 
+## Scheduling Issues
+
+ProfCounter is a measuring tool, thus its use must not change the latency of the final hardware. We noticed some problems under certain conditions that the CFG of the high-level code was affected just by the presence of ```write_pipe()``` builtin functions in the DUT, as the ```PROFCOUNTER_*()``` macros are in fact substituted by ```write_pipe()``` calls.
+
+To overcome this issue, the ```PROFCOUNTER_*()``` calls (except ```PROFCOUNTER_FINISH()```) instead inserts a placeholder command, which is substituted by the actual ```write_pipe()``` calls after the code is optimised and right before the HLS scheduling/binding. This is performed by the ```directives.tcl``` and ```transform.sh``` scripts.
+
+However, if no ```write_pipe()``` calls are present in the DUT, the optimiser will remove the pipe, since is does not recognise any usage for the pipe. Thus, ```PROFCOUNTER_FINISH()``` is the only macro that still uses ```write_pipe()``` directly. It is essential therefore to add this call at the end of your DUT, otherwise profiling won't work and the ProfCounter kernel will never end (i.e. ```clFinish()``` in the host will never return)!
+
+## Limitations
+
+* NDRange kernels are untested;
+* With the placeholder approach, we have not experienced any problem regarding the profiler call being moved away from its original position, leading to incorrect cycle count, nor any changes in the final latency caused by ProfCounter's presence;
+* If you have loops on your code that Vivado cannot pipeline (even when explicitely requested), with ProfCounter these loops can become pipelineable, thus in some cases Vivado might automatically pipeline those loops, affecting the hardware's latency. This is not expected behaviour and requires further study. Thus, all the projects in this repo have pipelining disabled.
+
 ## ProfCounter Commands
 
 ProfCounter works based on commands received via an OpenCL pipe. The use of ```include/profcounter.h``` is recommended as it already declares the OpenCL pipe and also defines useful functions:
 
-* ***PROFCOUNTER_INIT():*** initialise the private variables that contain the command identifiers;
-* ***PROFCOUNTER_CHECKPOINT(id):*** send a checkpoint command to ProfCounter. This is similar to ```PROFCOUNTER_STAMP()```, but also a checkpoint ID is saved with the timestamp:
+* ***PROFCOUNTER_INIT():*** initialise the placeholder. It must be called before any ```PROFCOUNTER_*()``` calls;
+* ***PROFCOUNTER_CHECKPOINT_id():*** send a checkpoint command to ProfCounter. This is similar to ```PROFCOUNTER_STAMP()```, but also a checkpoint ID is saved with the timestamp:
 	* The four most significant bits holds the checkpoint id, which is the ```id``` argument of this call. For current implementation, ```id``` can range from 0 to 11;
 	* The remaining 60 bits holds the timestamp. Please note that using checkpoints therefore removes 4 bits of timestamping capability;
-	* Only the first 4 bits of ```id``` are considered. You can use the other bits to "link" a variable from your OpenCL kernel to guarantee that this call will not be rearranged due to HLS scheduling policies (though we have not experienced such issue), creating a true data dependency (e.g. ```PROFCOUNTER_CHECKPOINT((myVariable << 4) | 0x4)```);
-* ***PROFCOUNTER_CHECKPOINT_id():*** similar to ```PROFCOUNTER_CHECKPOINT(X)```, but the checkpoint ID is resolved at compile-time. ```id``` can range from 0 to 11;
 * ***PROFCOUNTER_STAMP():*** send a stamp command to ProfCounter. The current clock cycle is enqueued for storing on global memory;
 * ***PROFCOUNTER_HOLD():*** stamp/checkpoint commands enqueued for write on global memory are held until ```PROFCOUNTER_FINISH()``` is called. This prevents ProfCounter from using the global memory bandwidth and possibly affecting performance of the kernels being tested;
-* ***PROFCOUNTER_FINISH():*** finish execution of ProfCounter. This must be called at the end of your kernel being tested. If ```PROFCOUNTER_HOLD()``` was previously called, this call will flush the request FIFO to global memory before finishing.
+* ***PROFCOUNTER_FINISH():*** finish execution of ProfCounter. This must be called at the end of your kernel being tested. If ```PROFCOUNTER_HOLD()``` was previously called, this call will flush the request FIFO to global memory before finishing. This call guarantees that ProfCounter will finish and it is essential for the OpenCL pipe to not be optimised away.
 
 Stamp/checkpoint commands are enqueued in a request FIFO. In current implementation, requests are dropped if the FIFO gets full. There are two cases where this might happen:
-* ```PROFCOUNTER_STAMP()```/```PROFCOUNTER_CHECKPOINT(id)```/```PROFCOUNTER_CHECKPOINT_X()``` is called several times in a small period of time, faster than the write of timestamps to global memory;
-* ```PROFCOUNTER_HOLD()``` was called and ```PROFCOUNTER_STAMP()```/```PROFCOUNTER_CHECKPOINT(id)```/```PROFCOUNTER_CHECKPOINT_X()``` is used several times, filling up the request FIFO.
+* ```PROFCOUNTER_STAMP()```/```PROFCOUNTER_CHECKPOINT_X()``` is called several times in a small period of time, faster than the write of timestamps to global memory;
+* ```PROFCOUNTER_HOLD()``` was called and ```PROFCOUNTER_STAMP()```/```PROFCOUNTER_CHECKPOINT_X()``` is used several times, filling up the request FIFO.
 
-If you think that the request FIFO is not big enough for your implementation, you can increase its size by changing the first parameter in the FIFO declaration on file ```srd/profCounter/SequentialWriter.v```, which is currently set to 256 words:
+If you think that the request FIFO is not big enough for your implementation, you can increase its size by changing the first parameter in the FIFO declaration on file ```src/profCounter/SequentialWriter.v```, which is currently set to 256 words:
 ```
 	/* ... */
 
@@ -207,12 +219,16 @@ $ make xo (compile the OpenCL objects)
 $ make clean (clean your whole project)
 ```
 
+The ```directives.tcl``` script makes use of an environment variable called ```PROFCOUNTERSRCROOT```, which points to the ```profCounter``` folder where all its sources and scripts are located. The provided makefiles in this project already handles this variable, however when adapting your code, make sure that this variable is set before calling the Xilinx toolchain!
+
 ## Files description
 
 * ***base/src/***;
 	* ***profCounter/FIFO/tb/:*** testbench for the FIFO module;
 	* ***profCounter/FIFO/:*** simple FIFO implementation;
 	* ***profCounter/generateXO.tcl:*** TCL script used during Vivado generation of the ```profCounter``` kernel;
+	* ***profCounter/directives.tcl:*** TCL script called by Vivado to convert the placeholder calls to actual OpenCL pipe writes (see ***Scheduling Issues***) and performs final HLS scheduling and binding;
+	* ***profCounter/transform.sh:*** transformation script: swaps placeholder calls by actual OpenCL pipe writes;
 	* ***profCounter/BasicController.v:*** basic controller that complies with the RTL kernel specification from Xilinx SDx (see https://www.xilinx.com/html_docs/xilinx2018_3/sdaccel_doc/creating-rtl-kernels-qnk1504034323350.html#qbh1504034323531);
 	* ***profCounter/commands.vh:*** macros defining the commands supported by ProfCounter;
 	* ***profCounter/CommandUnit.v:*** translates the commands coming from the OpenCL pipe;
@@ -232,7 +248,9 @@ This is a work under construction. There are still some stuff to be done:
 
 * Add support for NDRange kernels;
 * Currently, timestamp requests are enqueued in a FIFO for global memory write. If this FIFO is full, further requests are dropped. It would be nice to implement some logic to avoid dropping OR notifying the used that timestamps were dropped;
-* The ```SequentialWriter``` module is extremely simple, performing non-pipelined sequential writes of 64-bit words. It should be improved to perform pipelined burst writes and make use of the FIFOs from the AXI4 Slave interface.
+* The ```SequentialWriter``` module is extremely simple, performing non-pipelined sequential writes of 64-bit words. It should be improved to perform pipelined burst writes and make use of the FIFOs from the AXI4 Slave interface;
+* Guarantee that the placeholder calls will not affect scheduling in any case;
+* Further study on the effects of automatic pipelining of non-pipelineable loops when ProfCounter is inserted.
 
 ## Acknowledgements
 

@@ -26,6 +26,14 @@ CCLINKFLAGS=-lm -lxilinxopencl -lpthread -lrt -ldl -lcrypt -L$(XILINX_SDX)/runti
 # XOCC compile flags
 XOCCFLAGS=-t $(TARGET) --platform $(PLATFORM) -Iinclude -I../../base/include --save-temps --clkid $(CLKID)
 
+# By default, auto-pipelining is disabled
+AUTOPIPELINING=no
+ifeq ($(AUTOPIPELINING), no)
+    PIPELININGFLAG=--xp param:compiler.enableAutoPipelining=false
+else
+    PIPELININGFLAG=
+endif
+
 # checkForVivado: check if vivado binary is reachable
 define checkForVivado
     $(if $(wildcard $(VIVADO)), , $(error vivado binary not found, please check your Xilinx installation and/or the init script, e.g. /path/to/xilinx/SDx/20xx.x/settings64.sh))
@@ -115,7 +123,7 @@ fpga/$(TARGET)/$(DSA)/execute: src/host.fpga.c include/prepostambles.h ../../bas
 # Synthesises OpenCL kernels
 fpga/$(TARGET)/$(DSA)/program.xclbin: fpga/$(TARGET)/$(DSA)/bfs.xo
 	$(call checkForXclbin)
-	$(XOCC) $(XOCCFLAGS) $(XOCCLDFLAGS) -lo fpga/$(TARGET)/$(DSA)/program.xclbin fpga/$(TARGET)/$(DSA)/bfs.xo --sys_config ocl --report system -R2
+	$(XOCC) $(XOCCFLAGS) $(XOCCLDFLAGS) -lo fpga/$(TARGET)/$(DSA)/program.xclbin fpga/$(TARGET)/$(DSA)/bfs.xo --sys_config ocl -R2
 	# Append two lines to init.sh, responsible for writing onto /etc/profile the XILINX_OPENCL export and cd to /mnt
 	echo -e "\necho -e \"\\\\nexport XILINX_OPENCL=/mnt/embedded_root\" >> /etc/profile" >> fpga/$(TARGET)/$(DSA)/sd_card/init.sh
 	echo -e "echo -e \"cd /mnt\" >> /etc/profile" >> fpga/$(TARGET)/$(DSA)/sd_card/init.sh
@@ -124,7 +132,7 @@ fpga/$(TARGET)/$(DSA)/program.xclbin: fpga/$(TARGET)/$(DSA)/bfs.xo
 fpga/$(TARGET)/$(DSA)/bfs.xo: src/bfs.cl
 	$(call checkForXo)
 	mkdir -p fpga/$(TARGET)/$(DSA)
-	$(XOCC) $(XOCCFLAGS) -c --messageDb fpga/$(TARGET)/$(DSA)/bfs.mdb -Iinclude -I../../base/include --xp misc:solution_name=_xocc_compile --xp param:compiler.version=31 src/bfs.cl -o fpga/$(TARGET)/$(DSA)/bfs.xo --report system -R2
+	$(XOCC) $(XOCCFLAGS) -c --messageDb fpga/$(TARGET)/$(DSA)/bfs.mdb -Iinclude -I../../base/include --xp misc:solution_name=_xocc_compile --xp param:compiler.version=31 $(PIPELININGFLAG) src/bfs.cl -o fpga/$(TARGET)/$(DSA)/bfs.xo -R2
 
 # Clean all
 .PHONY: clean
