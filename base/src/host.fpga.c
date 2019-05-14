@@ -250,8 +250,8 @@ int main(int argc, char *argv[]) {
 	totalTime = (1000000 * tExecTime.tv_sec) + tExecTime.tv_usec;
 	printf("Elapsed time spent on kernels: %ld us; Average time per iteration: %lf us.\n", totalTime, totalTime / (double) i);
 
-	printf("Received values (assuming II of 136 cycles):\n");
-	printf("|    | Absolute values                       || II-normalised values                  | ID (if      |\n");
+	printf("Received values (assuming latency of 137 cycles):\n");
+	printf("|    | Absolute values                       || Latency-normalised values             | ID (if      |\n");
 	printf("|  i |       t(i) |  t(i)-t(0) | t(i)-t(i-1) ||       t(i) |  t(i)-t(0) | t(i)-t(i-1) | applicable) |\n");
 	for(i = 0; i < 50; i++) {
 		if(!(log[i]))
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
 		printf(
 			"| %2d | %10ld | %10ld |  %10ld || %10ld | %10ld |  %10ld |          %2u |\n", i,
 			timestampi, timestampi - timestamp0, i? (timestampi - timestampi_1) : 0,
-			timestampi / 136, (timestampi - timestamp0) / 136, i? ((timestampi - timestampi_1) / 136) : 0,
+			timestampi / 137, (timestampi - timestamp0) / 137, i? ((timestampi - timestampi_1) / 137) : 0,
 			checkpointID
 		);
 	}

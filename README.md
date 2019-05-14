@@ -117,7 +117,7 @@ $ make hw
 ```
 $ ./execute
 ```
-* With this example code, timestamping will be requested when ```j``` is 0, 15, 30, 40, 50, 70, 100, 120, 199 and 200 on the ```probe``` kernel. Considering that this loop has an initiation interval (II) of 136 cycles, the following output is expected:
+* With this example code, timestamping will be requested when ```j``` is 0, 15, 30, 40, 50, 70, 100, 120, 199 and 200 on the ```probe``` kernel. Considering that this loop has a latency of 137 cycles, the following output is expected:
 ```
 [ OK ] Getting platforms IDs...
 [ OK ] Getting devices IDs for first platform...
@@ -136,22 +136,22 @@ $ ./execute
 [ OK ] [0] Setting buffers...
 [ OK ] [0] Running kernels...
 [ OK ] [0] Getting kernels arguments...
-Elapsed time spent on kernels: 491 us; Average time per iteration: 491.000000 us.
-Received values (assuming II of 136 cycles):
-|    | Absolute values                       || II-normalised values                  | ID (if      |
+Elapsed time spent on kernels: 476 us; Average time per iteration: 476.000000 us.
+Received values (assuming latency of 137 cycles):
+|    | Absolute values                       || Latency-normalised values             | ID (if      |
 |  i |       t(i) |  t(i)-t(0) | t(i)-t(i-1) ||       t(i) |  t(i)-t(0) | t(i)-t(i-1) | applicable) |
-|  0 |   75002461 |          0 |           0 ||     551488 |          0 |           0 |           0 |
-|  1 |   75002599 |        138 |         138 ||     551489 |          1 |           1 |           0 |
-|  2 |   75004639 |       2178 |        2040 ||     551504 |         16 |          15 |           1 |
-|  3 |   75006679 |       4218 |        2040 ||     551519 |         31 |          15 |           2 |
-|  4 |   75008039 |       5578 |        1360 ||     551529 |         41 |          10 |           3 |
-|  5 |   75009399 |       6938 |        1360 ||     551539 |         51 |          10 |           4 |
-|  6 |   75012119 |       9658 |        2720 ||     551559 |         71 |          20 |           5 |
-|  7 |   75016199 |      13738 |        4080 ||     551589 |        101 |          30 |           6 |
-|  8 |   75018919 |      16458 |        2720 ||     551609 |        121 |          20 |           7 |
-|  9 |   75029663 |      27202 |       10744 ||     551688 |        200 |          79 |           8 |
-| 10 |   75029799 |      27338 |         136 ||     551689 |        201 |           1 |           9 |
-| 11 |   75029800 |      27339 |           1 ||     551689 |        201 |           0 |          11 |
+|  0 |   75004092 |          0 |           0 ||     547475 |          0 |           0 |           0 |
+|  1 |   75004229 |        137 |         137 ||     547476 |          1 |           1 |          10 |
+|  2 |   75006284 |       2192 |        2055 ||     547491 |         16 |          15 |          10 |
+|  3 |   75008339 |       4247 |        2055 ||     547506 |         31 |          15 |          10 |
+|  4 |   75009709 |       5617 |        1370 ||     547516 |         41 |          10 |          10 |
+|  5 |   75011079 |       6987 |        1370 ||     547526 |         51 |          10 |          10 |
+|  6 |   75013819 |       9727 |        2740 ||     547546 |         71 |          20 |          10 |
+|  7 |   75017929 |      13837 |        4110 ||     547576 |        101 |          30 |          10 |
+|  8 |   75020669 |      16577 |        2740 ||     547596 |        121 |          20 |          10 |
+|  9 |   75031492 |      27400 |       10823 ||     547675 |        200 |          79 |          10 |
+| 10 |   75031629 |      27537 |         137 ||     547676 |        201 |           1 |          10 |
+| 11 |   75031630 |      27538 |           1 ||     547676 |        201 |           0 |          11 |
 ```
 * ***Note:*** you can execute the host code with ```hold``` argument to activate the hold behaviour of ProfCounter (see Section ***ProfCounter Commands***):
 ```

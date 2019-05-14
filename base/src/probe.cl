@@ -1,5 +1,6 @@
 #include "profcounter.h"
 
+__attribute__((reqd_work_group_size(1,1,1)))
 __kernel void probe(__global unsigned * restrict timeline, char mustHold) {
 	int i, j;
 

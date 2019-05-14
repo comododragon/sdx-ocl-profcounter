@@ -9,6 +9,7 @@
 #define WARP_SZ 32
 #define CHUNK_SZ 32
 
+__attribute__((reqd_work_group_size(1,1,1)))
 __kernel void bfs(__global unsigned * restrict levels, __global unsigned * restrict edgeOffsets, __global unsigned * restrict edgeList, unsigned numVertices) {
 	bool flag = true;
 
