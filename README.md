@@ -162,7 +162,7 @@ $ ./execute hold
 
 ProfCounter is a measuring tool, thus its use must not change the latency of the final hardware. We noticed some problems under certain conditions that the CFG of the high-level code was affected just by the presence of ```write_pipe()``` builtin functions in the DUT, as the ```PROFCOUNTER_*()``` macros are in fact substituted by ```write_pipe()``` calls.
 
-To overcome this issue, the ```PROFCOUNTER_*()``` calls (except ```PROFCOUNTER_FINISH()```) instead inserts a placeholder command, which is substituted by the actual ```write_pipe()``` calls after the code is optimised and right before the HLS scheduling/binding. This is performed by the ```directives.tcl``` and ```transform.sh``` scripts.
+To overcome this issue, the ```PROFCOUNTER_*()``` calls (except ```PROFCOUNTER_FINISH()```) instead insert a placeholder command, which is substituted by the actual ```write_pipe()``` calls after the code is optimised and right before the HLS scheduling/binding. This is performed by the ```directives.tcl``` and ```transform.sh``` scripts.
 
 However, if no ```write_pipe()``` calls are present in the DUT, the optimiser will remove the pipe, since is does not recognise any usage for the pipe. Thus, ```PROFCOUNTER_FINISH()``` is the only macro that still uses ```write_pipe()``` directly. It is essential therefore to add this call at the end of your DUT, otherwise profiling won't work and the ProfCounter kernel will never end (i.e. ```clFinish()``` in the host will never return)!
 
@@ -170,7 +170,7 @@ However, if no ```write_pipe()``` calls are present in the DUT, the optimiser wi
 
 * NDRange kernels are untested;
 * With the placeholder approach, we have not experienced any problem regarding the profiler call being moved away from its original position, leading to incorrect cycle count, nor any changes in the final latency caused by ProfCounter's presence;
-* If you have loops on your code that Vivado cannot pipeline (even when explicitely requested), with ProfCounter these loops can become pipelineable, thus in some cases Vivado might automatically pipeline those loops, affecting the hardware's latency. This is not expected behaviour and requires further study. Thus, all the projects in this repo have pipelining disabled.
+* If you have loops on your code that Vivado cannot pipeline (even when explicitely requested), with ProfCounter these loops can become pipelineable. Therefore in some cases Vivado might automatically pipeline those loops, affecting the hardware's latency. This is not expected behaviour and requires further study. Thus, all the projects in this repo have pipelining disabled.
 
 ## ProfCounter Commands
 
@@ -247,7 +247,7 @@ The ```directives.tcl``` script makes use of an environment variable called ```P
 This is a work under construction. There are still some stuff to be done:
 
 * Add support for NDRange kernels;
-* Currently, timestamp requests are enqueued in a FIFO for global memory write. If this FIFO is full, further requests are dropped. It would be nice to implement some logic to avoid dropping OR notifying the used that timestamps were dropped;
+* Currently, timestamp requests are enqueued in a FIFO for global memory write. If this FIFO is full, further requests are dropped. It would be nice to implement some logic to avoid dropping OR notifying the user that timestamps were dropped;
 * The ```SequentialWriter``` module is extremely simple, performing non-pipelined sequential writes of 64-bit words. It should be improved to perform pipelined burst writes and make use of the FIFOs from the AXI4 Slave interface;
 * Guarantee that the placeholder calls will not affect scheduling in any case;
 * Further study on the effects of automatic pipelining of non-pipelineable loops when ProfCounter is inserted.
