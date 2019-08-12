@@ -255,3 +255,5 @@ This is a work under construction. There are still some stuff to be done:
 ## Acknowledgements
 
 The project author would like to thank São Paulo Research Foundation (FAPESP), who funds the research where this project is inserted (Grant 2016/18937-7).
+
+The opinions, hypotheses, conclusions or recommendations contained in this material are the sole responsibility of the author(s) and do not necessarily reflect FAPESP opinion.
